@@ -1,30 +1,24 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
-	"strings"
+
+	"github.com/jtigger/go-orient/pkg/survey"
 )
 
 
 func main() {
-	pkgs := NewPkgs()
-
-	bytes, err := ioutil.ReadFile("deps.csv")
+	path := "."
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+	survey, err := survey.Of(path)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("survey over \"%s\" failed: %s", path, err))
 	}
-	r := csv.NewReader(strings.NewReader(string(bytes)))
-
-	records, err := r.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-	for _, record := range records {
-		pkgs.AddDependence(record[0], record[1])
-	}
+	pkgs := survey.GetCodePackages()
 
 	all := pkgs.All()
 	sort.Slice(all, func(i, j int) bool {
@@ -40,22 +34,23 @@ func main() {
 	for _, pkg := range all {
 		fmt.Printf("(%d) => %s => (%d)\n", len(pkg.Dependants), pkg.Name, len(pkg.Dependencies))
 	}
-	printed := NewPkgs()
+	printed := map[string]bool{}
 	for _, root := range pkgs.Roots() {
 		printDeps(root, printed)
 	}
 }
 
-func printDeps(p *Pkg, printed *Pkgs) {
+
+func printDeps(p *survey.Pkg, printed map[string]bool) {
 	if len(p.Dependencies) == 0 {
-		printed.Add(p)
+		printed[p.Name]=true
 	}
-	if printed.Has(p) {
+	if _, has := printed[p.Name]; has {
 		return
 	}
 	fmt.Printf("%s:\n", p.Name)
-	deps := []*Pkg{}
-	for pkg, _ := range p.Dependencies {
+	var deps []*survey.Pkg
+	for _, pkg := range p.Dependencies {
 		deps = append(deps, pkg)
 	}
 	sort.Slice(deps, func(i, j int) bool {
@@ -71,6 +66,6 @@ func printDeps(p *Pkg, printed *Pkgs) {
 	}
 	for _, dep := range deps {
 		printDeps(dep, printed)
-		printed.Add(dep)
+		printed[p.Name]=true
 	}
 }

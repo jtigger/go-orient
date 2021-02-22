@@ -1,9 +1,9 @@
-package main
+package survey
 
 type Pkg struct {
 	Name         string
-	Dependencies map[*Pkg]bool
-	Dependants   map[*Pkg]bool
+	Dependencies map[string]*Pkg
+	Dependants   map[string]*Pkg
 }
 
 func (p *Pkg) String() string {
@@ -12,8 +12,8 @@ func (p *Pkg) String() string {
 
 func NewPkg(name string) *Pkg {
 	return &Pkg{Name: name,
-		Dependencies: make(map[*Pkg]bool),
-		Dependants:   make(map[*Pkg]bool),
+		Dependencies: make(map[string]*Pkg),
+		Dependants:   make(map[string]*Pkg),
 	}
 }
 
@@ -25,13 +25,13 @@ func NewPkgs() *Pkgs {
 	return &Pkgs{pkgs: make(map[string]*Pkg)}
 }
 
-func (p *Pkgs) Add(pkg *Pkg) {
-	p.pkgs[pkg.Name] = pkg
-}
-
 func (p *Pkgs) Has(pkg *Pkg) bool {
 	_, has := p.pkgs[pkg.Name]
 	return has
+}
+
+func (p *Pkgs) Get(pkgName string) Pkg {
+	return *p.pkgs[pkgName]  // TODO: deep copy to ensure integrity of this Pkg
 }
 
 func (p *Pkgs) AddDependence(from, to string) {
@@ -46,8 +46,8 @@ func (p *Pkgs) AddDependence(from, to string) {
 		p.pkgs[to] = dependency
 	}
 
-	dependant.Dependencies[dependency] = true
-	dependency.Dependants[dependant] = true
+	dependant.Dependencies[to] = dependency
+	dependency.Dependants[from] = dependant
 }
 
 func (p *Pkgs) Roots() []*Pkg {

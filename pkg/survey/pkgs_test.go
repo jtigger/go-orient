@@ -1,6 +1,8 @@
-package main
+package survey
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestRoots(t *testing.T) {
 	pkgs := NewPkgs()
@@ -12,4 +14,3 @@ func TestRoots(t *testing.T) {
 		t.Errorf("Expected exactly one root named '%s', but found: %+v", "a", roots)
 	}
 }
-

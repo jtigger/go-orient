@@ -1,3 +1,3 @@
-module github.com/jtigger/deps
+module github.com/jtigger/go-orient
 
 go 1.14
