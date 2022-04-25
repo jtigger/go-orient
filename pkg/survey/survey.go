@@ -41,7 +41,7 @@ func Of(relBasePath string) (*Survey, error) {
 			return filepath.SkipDir
 		}
 
-		pkgInDir, err := parser.ParseDir(fileSet, pkgPath, nil, parser.ImportsOnly)
+		pkgInDir, err := parser.ParseDir(fileSet, pkgPath, nil, parser.AllErrors)
 		for _, pkg := range pkgInDir {
 			pkgs[qualifiedPkgName(pkg.Name, pkgPath, basePath)] = pkg
 		}
@@ -114,4 +114,63 @@ func (s *Survey) dependenciesFor(qualPkgName string, astPkg *ast.Package) []stri
 		}
 	}
 	return dependencies
+}
+
+type visitor struct {
+	qualPkgName string
+	invocations []Invocation
+}
+
+type Invocation struct {
+	QualPkgName string
+	TypeName    string
+	FunName     string
+}
+
+func (v *visitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	switch n := node.(type) {
+	case *ast.CallExpr:
+		var pkgName string
+		var name string
+		fmt.Printf("invokes function \"%s()\"\n", n.Fun)
+		switch funName := n.Fun.(type) {
+		case *ast.Ident:
+			pkgName = ""
+			name = funName.Name
+		case *ast.SelectorExpr:
+			switch x := funName.X.(type) {
+			case *ast.Ident:
+				pkgName = x.Name
+			}
+			name = funName.Sel.Name
+		}
+		v.invocations = append(v.invocations, Invocation{
+			QualPkgName: pkgName,
+			TypeName:    "",
+			FunName:     name,
+		})
+	}
+	fmt.Printf("<%T> %v\n", node, node)
+	return v
+}
+
+func (v *visitor) Invocations() []Invocation {
+	return v.invocations
+}
+
+func (s *Survey) GetFunctions() []Invocation {
+	var invocations []Invocation
+	for qualPkgName, astPkg := range s.astPkgs {
+		funNamesPlucker := &visitor{
+			qualPkgName: qualPkgName,
+		}
+		for _, file := range astPkg.Files {
+			ast.Walk(funNamesPlucker, file)
+		}
+		invocations = append(invocations, funNamesPlucker.Invocations()...)
+	}
+	return invocations
 }

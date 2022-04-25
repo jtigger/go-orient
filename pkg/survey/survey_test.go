@@ -34,3 +34,16 @@ func TestSurvey_GetPackages_IncludesDependencies(t *testing.T) {
 		}
 	}
 }
+
+func TestSurvey_GetFunctions(t *testing.T) {
+	basePath := "../.."
+	survey, err := Of(basePath)
+	if err != nil {
+		t.Errorf("Of(\"%s\") failed: %s", basePath, err)
+	}
+	functions := survey.GetFunctions()
+
+	if len(functions) < 1 {
+		t.Errorf("Expected functions, but found none.")
+	}
+}
